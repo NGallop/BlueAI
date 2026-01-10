@@ -1,0 +1,3 @@
+import pyboy
+
+print("Okay")
