@@ -24,12 +24,22 @@ RELEASE_MAP = [
 ]
 
 ### Main loop
+## To do List:
+    # move pyboy into a class object
+    # keep time logic in main loop out of class object
+    # add time duration argument
+    # test out retrieving RAM values for state representation, store in pd.DataFrame?
 
 def main(sys_args):
 
     args = parse_args(sys_args)
     action_repeat = args.fine_control
     duration = args.duration
+    if duration == 0:
+        duration = 1  # default to 1 minute if 0 is provided
+        print("Duration of 0 provided, defaulting to 1 minute.")
+    else:
+        print(f"Running for {duration} minute(s) ==> ({duration*60} seconds; {duration/60} hours)")
     speed = args.speed
     window_type = args.window
     start_point = args.start_point
@@ -52,15 +62,24 @@ def main(sys_args):
     # Now: random actions (agent steps)
     # Run for 30 seconds
     start_time = time.time()
-    while time.time() - start_time < 60:
+    while time.time() - start_time < 60*duration:
+            # Check if window is still open
+        if not pyboy.tick():
+            print("Window closed by user")
+            break
         # Press the action
         for _ in range(action_repeat):
             pyboy.send_input(random.choice(ACTIONS_MAP))
-            pyboy.tick()
+
+            if not pyboy.tick():
+                break
+
             # Release the action
             for release_event in RELEASE_MAP:
                 pyboy.send_input(release_event)
-            pyboy.tick(action_repeat)
+
+            if not pyboy.tick():
+                break
 
     pyboy.stop()
 
@@ -103,9 +122,9 @@ def parse_args(sys_args):
     parser.add_argument(
         "--duration",
         type=int,
-        default=60,
+        default=1,
         required=False,
-        help="Duration to run the agent in seconds."
+        help="Duration to run the agent in minutes."
     )
     parser.add_argument(
         "--window",
